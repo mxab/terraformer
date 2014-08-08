@@ -24,8 +24,6 @@
 
     <div class="container">
         {{> yield}}
-
-
     </div>
     <!-- /.container -->
 
@@ -35,6 +33,7 @@
 <template name="home">
     {{>deployments}}
 </template>
+
 
 
 <template name="deployments">
@@ -67,6 +66,9 @@
         <td>{{status}}</td>
         <td>{{lastDeployment}}</td>
         <td>
+            <a href="{{pathFor 'deploymentEdit'}}">
+                <span class="glyphicon glyphicon-edit"></span>
+            </a>
             <button class="js-deploy btn btn-danger">
                 <span class="glyphicon glyphicon-bullhorn"></span>
                 Deploy
@@ -74,8 +76,8 @@
         </td>
     </tr>
 </template>
-<template name="deploymentNew">
-    {{#autoForm collection="Deployments" id="insertDeploymentForm" type="insert"}}
+<template name="deploymentNewOld">
+    {{#autoForm collection="Deployments" id="insertDeploymentForm" type="insert" }}
     <fieldset>
         <legend>Add a Deployment</legend>
         {{> afQuickField name='title'}}
@@ -85,6 +87,31 @@
         {{> afQuickField name='settings' rows=10}}
     </fieldset>
     <button type="submit" class="btn btn-primary">Insert</button>
+    {{/autoForm}}
+</template>
+<template name="deploymentNew">
+    {{>quickForm collection="Deployments" id="insertDeploymentForm" type="insert" omitFields="lastDeployment,status,settings,mup.env"}}
+
+
+
+</template>
+<template name="deploymentEdit">
+    {{>quickForm  doc=deployment collection="Deployments" id="updateDeploymentForm" type="update" omitFields="lastDeployment,status,settings,mup.env"}}
+
+
+
+</template>
+<template name="deploymentEditOld">
+    {{#autoForm doc=deployment collection="Deployments" id="updateDeploymentForm" type="update"}}
+    <fieldset>
+        <legend>Update</legend>
+        {{> afQuickField name='title'}}
+        {{> afQuickField name='git'}}
+        {{> afQuickField name='branch'}}
+        {{> afQuickField name='mup' rows=10}}
+        {{> afQuickField name='settings' rows=10}}
+    </fieldset>
+    <button type="submit" class="btn btn-primary">Save</button>
     {{/autoForm}}
 </template>
 
@@ -99,10 +126,23 @@
     </div>
 
     <div>
-        <pre><code>{{mup}}</code></pre>
+        <pre><code>{{mupJSON}}</code></pre>
     </div>
     <div>
-        <pre><code>{{settings}}</code></pre>
+        <pre><code>{{settingsJSON}}</code></pre>
     </div>
     {{/with}}
+</template>
+
+
+<template name="afObjectField_objectAsJson">
+    <div class="form-group {{#if afFieldIsInvalid name=this.atts.name autoform=this.atts.autoform}}has-error{{/if}}">
+
+        {{#unless this.skipLabel}}
+        <label for="{{this.atts.name}}">{{afFieldLabelText name=this.atts.name}}</label>
+        {{/unless}}
+        <textarea class="js-object-as-json" rows="10" data-schema-key="{{this.atts.name}}" id="{{this.atts.name}}" {{atts}} placeholder='{ "foo": "bar", ...}'>{{jsonValue}}</textarea>
+        <span class="help-block">{{{afFieldMessage name=this.atts.name autoform=this.atts.autoform}}}</span>
+    </div>
+    {{debugJSON}}
 </template>
