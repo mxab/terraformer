@@ -5,7 +5,8 @@
       "iron-router": {},
       "bootstrap-3": {},
       "collection2": {},
-      "autoform": {}
+      "autoform": {},
+      "underscore-string-latest": {}
     },
     "packages": {
       "iron-router": {
@@ -27,6 +28,11 @@
         "git": "https://github.com/aldeed/meteor-autoform.git",
         "tag": "v0.16.1",
         "commit": "34a447fd3a1b3164c78f865aabbac3ddc2d033fb"
+      },
+      "underscore-string-latest": {
+        "git": "https://github.com/TimHeckel/meteor-underscore-string.git",
+        "tag": "v2.3.3",
+        "commit": "4a5d70eee48fbd90a6e6fc78747250d704a0b3bb"
       },
       "iron-layout": {
         "git": "https://github.com/EventedMind/iron-layout.git",

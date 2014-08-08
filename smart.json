@@ -3,6 +3,7 @@
     "iron-router": {},
     "bootstrap-3": {},
     "collection2": {},
-    "autoform": {}
+    "autoform": {},
+    "underscore-string-latest": {}
   }
 }

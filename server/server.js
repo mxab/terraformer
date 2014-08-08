@@ -1,10 +1,26 @@
 //Npm.depends({
 //    'js-git': '0.7.5'
 //});
-function ensureSubPath(subPath, command) {
-    if (subPath.startsWith(".") || command.workingDir.startsWith("/") || command.workingDir.startsWith("~")) {
+function ensureSubPath(subPath) {
+    if (_(subPath).startsWith(".") || _(subPath).startsWith("/") || _(subPath).startsWith("~")) {
         throw new Error("working dir should not start with . or / or ~")
     }
+}
+/**
+ *
+ * @param {string} deploymentWorkingDir
+ * @return {string}
+ */
+function getRepoDir(deploymentWorkingDir) {
+    return deploymentWorkingDir + "/repo";
+}
+/**
+ *
+ * @param {string} deploymentWorkingDir
+ * @return {string}
+ */
+function mupDeployDir(deploymentWorkingDir) {
+    return deploymentWorkingDir + "/deploy";
 }
 Meteor.methods({
     "deploy": function (deploymentId) {
@@ -27,8 +43,8 @@ Meteor.methods({
         if (!exists) {
             fs.mkdirSync(deploymentWorkingDir);
         }
-        var deployDir = deploymentWorkingDir + "/deploy";
-        var repoDir = deploymentWorkingDir + "/repo";
+        var deployDir = mupDeployDir(deploymentWorkingDir);
+        var repoDir = getRepoDir(deploymentWorkingDir);
         if (!fs.existsSync(deployDir)) {
             fs.mkdirSync(deployDir);
         }
@@ -44,32 +60,43 @@ Meteor.methods({
         }
 
         var repoResult = repoOp(deployment, deploymentWorkingDir);
-        console.log("reporesult", repoResult);
+        console.log("REPO OP RESULT", repoResult);
 
+
+        /**
+         * Excute optional commands
+         */
         if (deployment.commands && deployment.commands.length) {
 
             deployment.commands.forEach(function (c) {
 
-                var commandOp = Meteor._wrapAsync(command);
-                var commandResult = commandOp(c);
+                var commandOp = Meteor._wrapAsync(executeCommand);
+                var commandResult = commandOp(c, deploymentWorkingDir);
                 console.log("CommandResult", commandResult)
 
             });
         }
+        // END
 
 
         var mupOp = Meteor._wrapAsync(mupDeploy);
         var mupResult = mupOp(deployment, deploymentWorkingDir);
-        console.log("mupResult", mupResult);
+
+        Deployments.update({_id: deployment._id}, {$set: {status: "done"}});
+        console.log("MUP RESULT", mupResult);
 
 
         // http://nodejs.org/api.html#_child_processes
 
 
         function cloneRepository(deployment, deploymentWorkingDir, callback) {
+            var repoDir = getRepoDir(deploymentWorkingDir);
+
             var sys = Npm.require('sys');
             var exec = Npm.require('child_process').exec;
-            var child = exec("git clone " + deployment.git + " . && git checkout " + deployment.branch, {
+            var commandLine = "git clone " + deployment.git + " . && git checkout " + deployment.branch;
+            console.log("EXECUTING: "+commandLine);
+            var child = exec(commandLine, {
                 cwd: repoDir
             }, Meteor.bindEnvironment(callback));
             child.stdout.pipe(process.stdout);
@@ -78,6 +105,7 @@ Meteor.methods({
 
 
         function pullRepository(deployment, deploymentWorkingDir, callback) {
+            var repoDir = getRepoDir(deploymentWorkingDir);
             var sys = Npm.require('sys');
             var exec = Npm.require('child_process').exec;
             var child = exec("git pull && git checkout " + deployment.branch, {
@@ -88,19 +116,30 @@ Meteor.methods({
         }
 
         function mupDeploy(deployment, deploymentWorkingDir, callback) {
+            /**
+             * @type {string}
+             */
+            var deployDir = mupDeployDir(deploymentWorkingDir);
 
             var extend = Npm.require('util')._extend;
-
-            var app = repoDir;
+            /**
+             *
+             * @type {string}
+             */
+            var appDir = getRepoDir(deploymentWorkingDir);
+            /**
+             *
+             * @type {string|undefined}
+             */
             var subPath = deployment.appDir;
             if (subPath) {
                 ensureSubPath(subPath);
 
-                app += "/" + subPath
+                appDir += "/" + subPath
             }
             //Object.ext
             var mup = extend(deployment.mup, {
-                app: app,
+                app: appDir,
                 env: JSON.parse(deployment.mup.envJSON)
             });
             delete mup.envJSON;
@@ -115,48 +154,31 @@ Meteor.methods({
             var exec = Npm.require('child_process').exec;
             var child = exec("mup setup && mup deploy", {
                 cwd: deployDir
-            }, Meteor.bindEnvironment(function (error) {
-
-                if (error !== null) {
-                    Deployments.update({_id: deployment._id}, {$set: {status: "error"}});
-                    callback(error);
-                } else {
-                    Deployments.update({_id: deployment._id}, {$set: {status: "success"}});
-                    callback();
-                }
-            }));
+            }, Meteor.bindEnvironment(callback));
             child.stdout.pipe(process.stdout);
             child.stderr.pipe(process.stderr);
 
         }
 
-        function command(command, deploymentWorkingDir) {
+        function executeCommand(command, deploymentWorkingDir, callback) {
 
             var sys = Npm.require('sys');
             var exec = Npm.require('child_process').exec;
             var commandLine = command.name;
 
-            var workingDir = repoDir;
+            var workingDir = getRepoDir(deploymentWorkingDir);
             if (command.workingDir) {
                 var subPath = command.workingDir;
-                ensureSubPath(subPath, command);
+                ensureSubPath(subPath);
                 workingDir += "/" + command.workingDir;
             }
-            if (command.args) {
+            if (command.args && command.args.length) {
                 commandLine += " ";
                 commandLine += command.args.join(" ");
             }
             var child = exec(commandLine, {
                 cwd: workingDir
-            }, Meteor.bindEnvironment(function (error) {
-
-
-                if (error !== null) {
-                    console.log('exec error: ' + error);
-                } else {
-                    mupDeploy(deployment, deploymentWorkingDir);
-                }
-            }));
+            }, Meteor.bindEnvironment(callback));
             child.stdout.pipe(process.stdout);
             child.stderr.pipe(process.stderr);
         }
