@@ -51,6 +51,7 @@ function pullRepository(deployment, deploymentWorkingDir, callback) {
 }
 
 function mupDeploy(deployment, deploymentWorkingDir, callback) {
+    var fs = Npm.require('fs');
     /**
      * @type {string}
      */
@@ -128,7 +129,7 @@ Meteor.methods({
          *
          * @type {string}
          */
-        var workingDir = (Meteor.settings && Meteor.settings.workingDir) || "terraformerworkdir";
+        var workingDir = (Meteor.settings && Meteor.settings.workingDir) || getUserHome()+"/terraformerworkdir";
 
 
         /**
@@ -194,3 +195,7 @@ Meteor.methods({
 
     }
 });
+
+function getUserHome() {
+    return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
+}
