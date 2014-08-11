@@ -25,8 +25,11 @@ function mupDeployDir(deploymentWorkingDir) {
 Meteor.methods({
     "deploy": function (deploymentId) {
 
-
-        var workingDir = "/Users/bruchmann/temp/terraformerworkdir";
+        /**
+         *
+         * @type {string}
+         */
+        var workingDir = (Meteor.settings && Meteor.settings.workingDir) || "~/temp/terraformerworkdir";
 
 
         /**
