@@ -128,7 +128,7 @@ Meteor.methods({
          *
          * @type {string}
          */
-        var workingDir = (Meteor.settings && Meteor.settings.workingDir) || "~/temp/terraformerworkdir";
+        var workingDir = (Meteor.settings && Meteor.settings.workingDir) || "terraformerworkdir";
 
 
         /**
